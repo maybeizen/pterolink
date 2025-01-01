@@ -5,7 +5,7 @@ A Node.js library for interacting with the Pterodactyl Panel API.
 ## Installation
 
 ```bash
-npm install pterolink
+# still in development lol
 ```
 
 ## Getting Started
