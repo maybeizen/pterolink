@@ -66,6 +66,23 @@ class Servers {
    * @param {number} data.limits.disk - Disk limit in MB
    * @param {number} data.limits.io - Block IO weight
    * @param {number} data.limits.cpu - CPU limit percentage
+   * @param {Object} data.feature_limits - Feature limits
+   * @param {number} data.feature_limits.databases - Maximum number of databases
+   * @param {number} data.feature_limits.allocations - Maximum number of allocations
+   * @param {number} data.feature_limits.backups - Maximum number of backups
+   * @param {Object} data.allocation - Allocation details
+   * @param {number} data.allocation.default - Default allocation ID
+   * @param {Array<number>} [data.allocation.additional] - Additional allocation IDs
+   * @param {boolean} [data.oom_disabled] - Whether to disable OOM killer
+   * @param {string} [data.node] - Node ID to deploy server on
+   * @param {Object} [data.deploy] - Deployment details
+   * @param {Array<number>} [data.deploy.locations] - Array of location IDs
+   * @param {Array<number>} [data.deploy.dedicated_ip] - Whether to use dedicated IP
+   * @param {Array<number>} [data.deploy.port_range] - Array of port ranges
+   * @param {Object} [data.environment] - Environment variables
+   * @param {boolean} [data.start_on_completion] - Whether to start on installation completion
+   * @param {boolean} [data.skip_scripts] - Whether to skip egg scripts
+   * @param {string} [data.external_id] - External identifier
    * @returns {Promise<Object>} Created server details
    * @throws {ValidationError} If the provided data is invalid
    * @throws {UnauthorizedError} If the API key is invalid
@@ -291,6 +308,16 @@ class Build {
    * @param {Array<number>} [data.add_allocations] - Allocation IDs to add
    * @param {Array<number>} [data.remove_allocations] - Allocation IDs to remove
    * @param {Object} [data.limits] - Resource limits
+   * @param {number} [data.limits.memory] - Memory limit in MB
+   * @param {number} [data.limits.swap] - Swap limit in MB
+   * @param {number} [data.limits.disk] - Disk limit in MB
+   * @param {number} [data.limits.io] - Block IO weight
+   * @param {number} [data.limits.cpu] - CPU limit percentage
+   * @param {Object} [data.feature_limits] - Feature limits
+   * @param {number} [data.feature_limits.databases] - Maximum number of databases
+   * @param {number} [data.feature_limits.allocations] - Maximum number of allocations
+   * @param {number} [data.feature_limits.backups] - Maximum number of backups
+   * @param {boolean} [data.oom_disabled] - Whether to disable OOM killer
    * @returns {Promise<Object>} Updated server build configuration
    * @throws {NotFoundError} If the server doesn't exist
    * @throws {ValidationError} If the provided data is invalid

@@ -11,6 +11,29 @@ const config = {
 
 const client = new ApplicationClient(config);
 
+async function testServerCreation() {
+  logger.info("Starting server creation test...");
+
+  try {
+    const server = await client.servers.create({
+      name: "Test",
+      user: "1",
+      egg: "1",
+      docker_image: "1",
+      startup: "1",
+      limits: {
+        memory: 1024,
+        swap: 0,
+        disk: 1024,
+        io: 0,
+        cpu: 0,
+      },
+    });
+  } catch (error) {
+    logger.error("Failed to create server", error);
+  }
+}
+
 async function testNodeCreation() {
   logger.info("Starting node creation test...");
 
@@ -43,27 +66,5 @@ async function testNodeCreation() {
   }
 }
 
-async function testUserCreation() {
-  logger.info("Starting user creation test...");
-
-  try {
-    const newUser = await client.users.create({
-      email: "test@example.com",
-      username: "testuser",
-      first_name: "Test",
-      last_name: "User",
-      password: "password123",
-    });
-
-    logger.success("User created successfully!");
-    logger.debug("User details:");
-    console.log(chalk.cyan(JSON.stringify(newUser, null, 2)));
-
-    return newUser;
-  } catch (error) {
-    logger.error("Failed to create user", error);
-  }
-}
-
 logger.info("Starting Pterodactyl API tests...");
-testNodeCreation().then(() => logger.info("Node creation test completed"));
+testServerCreation().then(() => logger.info("Server creation test completed"));
