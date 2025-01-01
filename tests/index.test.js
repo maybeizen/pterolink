@@ -3,11 +3,13 @@ import { ApplicationClient } from "../dist/index.mjs";
 import { logger } from "../src/utils/logger.js";
 import chalk from "chalk";
 
-const client = new ApplicationClient({
+const config = {
   apiKey: process.env.APPLICATION_API_KEY,
   url: process.env.URL,
   rejectUnauthorized: true,
-});
+};
+
+const client = new ApplicationClient(config);
 
 async function testNodeCreation() {
   logger.info("Starting node creation test...");
@@ -64,4 +66,4 @@ async function testUserCreation() {
 }
 
 logger.info("Starting Pterodactyl API tests...");
-testUserCreation();
+testNodeCreation().then(() => logger.info("Node creation test completed"));

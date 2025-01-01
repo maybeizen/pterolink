@@ -1,13 +1,10 @@
 import axios from "axios";
 import { Agent } from "https";
-import Nodes from "./application/Nodes.js";
-import Users from "./application/Users.js";
-import Servers from "./application/Servers.js";
 
-class ApplicationClient {
+class UserClient {
   constructor(config) {
     this.axios = axios.create({
-      baseURL: `${config.url.replace(/\/$/, "")}/api/application`,
+      baseURL: `${config.url.replace(/\/$/, "")}/api/client`,
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         Accept: "application/json",
@@ -17,11 +14,7 @@ class ApplicationClient {
         rejectUnauthorized: config.rejectUnauthorized !== false,
       }),
     });
-
-    this.nodes = new Nodes(this);
-    this.users = new Users(this);
-    this.servers = new Servers(this);
   }
 }
 
-export default ApplicationClient;
+export default UserClient;
