@@ -25,10 +25,34 @@ async function testServerCreation() {
         memory: 1024,
         swap: 0,
         disk: 1024,
-        io: 0,
+        io: 500,
         cpu: 0,
       },
+      feature_limits: {
+        databases: 1,
+        allocations: 1,
+        backups: 1,
+      },
+      allocation: {
+        default: 1,
+        additional: [1],
+      },
+      oom_disabled: false,
+      node: 1,
+      environment: {
+        SERVER_JARFILE: "server.jar",
+        VANILLA_VERSION: "latest",
+      },
+      start_on_completion: false,
+      skip_scripts: false,
+      external_id: "1",
     });
+
+    logger.success("Server created successfully!");
+    logger.debug("Server details:");
+    console.log(chalk.cyan(JSON.stringify(server, null, 2)));
+
+    return server;
   } catch (error) {
     logger.error("Failed to create server", error);
   }
