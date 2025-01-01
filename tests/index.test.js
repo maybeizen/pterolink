@@ -1,10 +1,11 @@
+import "dotenv/config";
 import { ApplicationClient } from "../dist/index.mjs";
 import { logger } from "../src/utils/logger.js";
 import chalk from "chalk";
 
 const client = new ApplicationClient({
-  apiKey: "ptla_HNQzdpNHcfBOwB5LJt3GabJb67j6EP8o7zaEefkQNvS",
-  url: "https://panel.maybeizen.space",
+  apiKey: process.env.APPLICATION_API_KEY,
+  url: process.env.URL,
   rejectUnauthorized: true,
 });
 
