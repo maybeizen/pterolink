@@ -9,6 +9,7 @@ class Nodes {
    */
   constructor(client) {
     this.client = client;
+    this.allocations = new Allocations(this.client);
   }
 
   /**
@@ -37,6 +38,25 @@ class Nodes {
   async get(id) {
     try {
       const response = await this.client.axios.get(`/nodes/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Display the Wings configuration for a node
+   * @param {number|string} id - The ID of the node
+   * @returns {Promise<Object>} Wings configuration
+   * @throws {NotFoundError} If the node doesn't exist
+   * @throws {UnauthorizedError} If the API key is invalid
+   * @throws {PteroError} If the API request fails
+   */
+  async config(id) {
+    try {
+      const response = await this.client.axios.get(
+        `/nodes/${id}/configuration`
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -117,6 +137,44 @@ class Nodes {
   async delete(id) {
     try {
       await this.client.axios.delete(`/nodes/${id}`);
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+class Allocations {
+  constructor(client) {
+    this.client = client;
+  }
+
+  async list(id) {
+    try {
+      const response = await this.client.axios.get(`/nodes/${id}/allocations`);
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async create(id, data) {
+    try {
+      const response = await this.client.axios.post(
+        `/nodes/${id}/allocations`,
+        data
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async delete(id, allocationId) {
+    try {
+      await this.client.axios.delete(
+        `/nodes/${id}/allocations/${allocationId}`
+      );
       return true;
     } catch (error) {
       throw error;
