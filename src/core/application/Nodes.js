@@ -5,7 +5,7 @@
 class Nodes {
   /**
    * Creates a new Nodes instance
-   * @param {import('../Client.js').default} client - The PteroClient instance
+   * @param {import('../Client.js').default} client - The ApplicationClient instance
    */
   constructor(client) {
     this.client = client;

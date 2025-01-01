@@ -3,7 +3,7 @@ import { Agent } from "https";
 import Nodes from "./application/Nodes.js";
 import Users from "./application/Users.js";
 
-class PteroClient {
+class ApplicationClient {
   constructor(config) {
     this.axios = axios.create({
       baseURL: `${config.url.replace(/\/$/, "")}/api/application`,
@@ -22,4 +22,4 @@ class PteroClient {
   }
 }
 
-export default PteroClient;
+export default ApplicationClient;

@@ -1,5 +1,5 @@
 {
-  "name": "pterojs",
+  "name": "pterolink",
   "version": "1.0.0",
   "description": "A Node.js library for interacting with the Pterodactyl Panel API",
   "main": "./dist/index.js",
