@@ -1,7 +1,11 @@
+import ServerDetails from "./ServerDetails.js";
+
 class Server {
-  constructor(client, id) {
+  constructor(client, serverId) {
     this.client = client;
-    this.id = id;
+    this.id = serverId;
+
+    this.details = new ServerDetails(client, serverId);
   }
 }
 

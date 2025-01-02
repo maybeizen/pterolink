@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Agent } from "https";
 import { Server, Account } from "./user/index.js";
+import { Servers } from "./user/index.js";
 import { ValidationError } from "../errors/index.js";
 
 class UserClient {
@@ -30,6 +31,7 @@ class UserClient {
       }),
     });
 
+    this.servers = new Servers(this);
     this.server = new Server(this);
     this.account = new Account(this);
   }
