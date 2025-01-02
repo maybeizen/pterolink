@@ -1,4 +1,5 @@
 import ApplicationClient from "./core/Client.js";
+import UserClient from "./core/UserClient.js";
 import { logger } from "./utils/logger.js";
 import {
   PteroError,
@@ -11,7 +12,7 @@ import {
 export {
   // Client
   ApplicationClient,
-
+  UserClient,
   // Utilities
   logger,
 
