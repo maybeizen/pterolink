@@ -4,7 +4,15 @@ import TwoFactor from "./TwoFactor.js";
 import Email from "./UpdateEmail.js";
 import UpdatePassword from "./UpdatePassword.js";
 
+/**
+ * Handles account-related operations
+ * @class
+ */
 class Account {
+  /**
+   * Creates a new Account instance
+   * @param {import('../UserClient.js').default} client - The UserClient instance
+   */
   constructor(client) {
     this.client = client;
     this.details = new AccountDetails(client);
