@@ -6,6 +6,7 @@ pnpm-lock.yaml
 # Dist/Build
 dist/
 build/
+*.tsbuildinfo
 
 # Logs
 logs
@@ -23,3 +24,6 @@ npm-debug.log*
 
 # environment variables
 .env
+
+# Test coverage
+coverage/

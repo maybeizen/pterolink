@@ -1,52 +1,42 @@
 import chalk from "chalk";
-import {
-  ValidationError,
-  UnauthorizedError,
-  NotFoundError,
-  RateLimitError,
-} from "../errors/index.js";
 
-export const logger = {
-  info: (message) => console.log(chalk.blue("🔵"), chalk.blue(message)),
-  success: (message) => console.log(chalk.green("🟢"), chalk.green(message)),
-  error: (message, error) => {
-    console.log(chalk.red("🔴"), chalk.red(message));
+class Logger {
+  constructor() {
+    this.log = console.log;
+  }
 
-    if (error instanceof ValidationError) {
-      console.log(chalk.red("🔴 Validation Errors:"));
-      error.errors.forEach((err) => {
-        console.log(chalk.red(`    - ${err.detail || err}`));
-      });
-    } else if (error instanceof UnauthorizedError) {
-      console.log(
-        chalk.red("🔴 Authentication Error:"),
-        chalk.yellow(error.message)
-      );
-    } else if (error instanceof NotFoundError) {
-      console.log(
-        chalk.red("🔴 Not Found:"),
-        chalk.yellow(`${error.resource} (ID: ${error.resourceId})`)
-      );
-    } else if (error instanceof RateLimitError) {
-      console.log(
-        chalk.red("🔴 Rate Limited:"),
-        chalk.yellow(`Try again in ${error.retryAfter} seconds`)
-      );
-    } else if (error?.response?.data) {
-      console.log(chalk.red("🔵 Details:"));
-      console.log(chalk.red("🔵 Status:"), chalk.yellow(error.response.status));
-      console.log(
-        chalk.red("🔵 Message:"),
-        chalk.yellow(error.response.data.message || "Unknown error")
-      );
-      if (error.response.data.errors) {
-        console.log(chalk.red("🔴 Validation Errors:"));
-        error.response.data.errors.forEach((err) => {
-          console.log(chalk.red(`    - ${err.detail}`));
-        });
-      }
-    }
-  },
-  warn: (message) => console.log(chalk.yellow("🟡"), chalk.yellow(message)),
-  debug: (message) => console.log(chalk.white("🔍"), chalk.white(message)),
-};
+  getTimestamp() {
+    return new Date().toLocaleTimeString("en-US", { hour12: false });
+  }
+
+  formatLog(color, tag, message) {
+    this.log(
+      chalk.gray(`[${this.getTimestamp()}]`) +
+        chalk[color](` (${tag}) ${message}`)
+    );
+  }
+
+  info(message) {
+    this.formatLog("cyan", "INFO", message);
+  }
+
+  error(message) {
+    this.formatLog("red", "ERROR", message);
+  }
+
+  success(message) {
+    this.formatLog("green", "SUCCESS", message);
+  }
+
+  warn(message) {
+    this.formatLog("yellow", "WARN", message);
+  }
+
+  debug(message) {
+    this.formatLog("gray", "DEBUG", message);
+  }
+}
+
+const logger = new Logger();
+
+export { logger };
