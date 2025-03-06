@@ -33,6 +33,14 @@ export const handleApiError = (error: any): never => {
         data.resource || "Resource",
         data.identifier || "unknown"
       );
+    case 422:
+      throw new ValidationError(
+        data.message || "Validation failed",
+        data.errors?.map((err: any) => ({
+          field: err.field || "unknown",
+          detail: err.detail || err.message,
+        }))
+      );
     case 429:
       throw new RateLimitError(
         parseInt(error.response.headers["retry-after"]) || 60

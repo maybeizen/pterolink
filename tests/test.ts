@@ -1,4 +1,4 @@
-import { PteroClient, logger } from "pterolink";
+import { PteroClient, User } from "pterolink";
 import "dotenv/config";
 
 if (!process.env.APPLICATION_API_KEY || !process.env.URL) {
@@ -12,6 +12,10 @@ const config = {
 
 const client = new PteroClient(config);
 
-client.healthCheck().then((res) => {
-  console.log(res);
-});
+async function main() {
+  await client.users.delete(6).then(() => {
+    console.log("Deleted user 6");
+  });
+}
+
+main();
