@@ -12,10 +12,13 @@ const config = {
 
 const client = new PteroClient(config);
 
-async function main() {
-  await client.users.delete(6).then(() => {
-    console.log("Deleted user 6");
+client.users
+  .create({
+    email: "test@pterolink.dev",
+    username: "test",
+    first_name: "test",
+    last_name: "test",
+  })
+  .then((user) => {
+    console.log(user);
   });
-}
-
-main();
