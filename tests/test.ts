@@ -10,4 +10,9 @@ const client = new PteroClient({
   panelUrl: process.env.URL,
 });
 
-console.log(client);
+async function main() {
+  const user = (await client.users.list()).rootAdmins().get();
+  console.log(user);
+}
+
+main();

@@ -15,8 +15,8 @@ class UserDetails {
   async execute() {
     try {
       const response = this.external
-        ? await this.client.axios.get(`/users/${this.id}`)
-        : await this.client.axios.get(`/users/external/${this.id}`);
+        ? await this.client.axios.get(`/users/external/${this.id}`)
+        : await this.client.axios.get(`/users/${this.id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error, {

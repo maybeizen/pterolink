@@ -21,7 +21,11 @@ class UpdateUser {
       );
       return response.data;
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error, {
+        resource: "Users",
+        identifier: this.id,
+        context: "updating user details",
+      });
     }
   }
 }
