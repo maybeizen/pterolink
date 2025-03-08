@@ -51,6 +51,25 @@ class PteroClient {
       return { message: "500 Internal Server Error", data: error };
     }
   }
+
+  toJSON() {
+    return {
+      panelUrl: this.panelUrl,
+      _type: "PteroLink.Client",
+    };
+  }
+
+  toString() {
+    return `PteroClient(${this.panelUrl})`;
+  }
+
+  [Symbol.for("nodejs.util.inspect.custom")]() {
+    return {
+      panelUrl: this.panelUrl,
+      apiKey: "***************",
+      _type: "PteroLink.Client",
+    };
+  }
 }
 
 export { PteroClient };

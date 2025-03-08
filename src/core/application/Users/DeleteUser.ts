@@ -14,7 +14,11 @@ class DeleteUser {
     try {
       await this.client.axios.delete(`/users/${this.id}`);
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: this.id,
+        context: "deleting user",
+      });
     }
   }
 }

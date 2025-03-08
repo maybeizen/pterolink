@@ -1,12 +1,6 @@
 import { PteroClient } from "../../PteroClient";
 import { handleApiError } from "../../../errors";
-
-interface CreateUserData {
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-}
+import { CreateUserData } from "../../../types/Users";
 
 class CreateUser {
   private client: PteroClient;
@@ -22,9 +16,13 @@ class CreateUser {
       const response = await this.client.axios.post("/users", this.data);
       return response.data;
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: this.data.username,
+        context: "creating user",
+      });
     }
   }
 }
 
-export { CreateUser, CreateUserData };
+export { CreateUser };

@@ -2,28 +2,16 @@ import { PteroClient } from "../../PteroClient";
 import { NotFoundError } from "../../../errors";
 import { ListUsers } from "./ListUsers";
 import { UserDetails } from "./UserDetails";
-import { CreateUser, CreateUserData } from "./CreateUser";
-import { UpdateUser, UpdateUserData } from "./UpdateUser";
+import { CreateUser } from "./CreateUser";
+import { UpdateUser } from "./UpdateUser";
 import { DeleteUser } from "./DeleteUser";
-interface UserAttributes {
-  id: number;
-  external_id: string | null;
-  uuid: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  language: string;
-  root_admin: boolean;
-  "2fa": boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface UserResponse {
-  object: string;
-  attributes: UserAttributes;
-}
+import { SearchUsers } from "./SearchUsers";
+import {
+  UserAttributes,
+  UserResponse,
+  CreateUserData,
+  UpdateUserData,
+} from "../../../types/Users";
 
 class Users {
   private client: PteroClient;
@@ -34,6 +22,13 @@ class Users {
 
   public async list() {
     const users = await new ListUsers(this.client).execute();
+    return users.map(
+      (user: UserResponse) => new User(this.client, user.attributes)
+    );
+  }
+
+  public async search(query: string) {
+    const users = await new SearchUsers(this.client, query).execute();
     return users.map(
       (user: UserResponse) => new User(this.client, user.attributes)
     );
@@ -60,8 +55,8 @@ class User {
     }
   }
 
-  public async get(id: number) {
-    const response = await new UserDetails(this.client, id).execute();
+  public async get(id: number, external: boolean = false) {
+    const response = await new UserDetails(this.client, id, external).execute();
     this.attributes = response.attributes;
     return this;
   }
@@ -85,6 +80,13 @@ class User {
     }
     await new DeleteUser(this.client, this.attributes.id).execute();
   }
+
+  toJSON() {
+    return {
+      ...this.attributes,
+      client: this.client,
+    };
+  }
 }
 
-export { Users, User, UserAttributes, UserResponse };
+export { Users, User };

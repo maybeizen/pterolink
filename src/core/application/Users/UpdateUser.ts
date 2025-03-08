@@ -1,14 +1,6 @@
 import { PteroClient } from "../../PteroClient";
 import { handleApiError } from "../../../errors";
-
-interface UpdateUserData {
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  language?: string;
-  password?: string;
-}
+import { UpdateUserData } from "../../../types/Users";
 
 class UpdateUser {
   private client: PteroClient;
@@ -34,4 +26,4 @@ class UpdateUser {
   }
 }
 
-export { UpdateUser, UpdateUserData };
+export { UpdateUser };

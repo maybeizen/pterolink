@@ -9,7 +9,8 @@ export class PteroError extends Error {
     message: string,
     public code: string,
     public statusCode?: number,
-    public errors?: Array<{ code: string; detail: string }>
+    public errors?: Array<{ code: string; detail: string }>,
+    public response?: any
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -17,6 +18,11 @@ export class PteroError extends Error {
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }
+
+    Object.defineProperty(this, "message", { enumerable: true });
+    Object.defineProperty(this, "code", { enumerable: true });
+    Object.defineProperty(this, "statusCode", { enumerable: true });
+    Object.defineProperty(this, "errors", { enumerable: true });
   }
 
   toJSON() {
