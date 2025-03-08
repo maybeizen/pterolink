@@ -37,9 +37,9 @@ const users = [
   },
 ];
 
-async function main(users: CreateUserData[]) {
-  const admins = (await client.users.list()).limit(1);
-  console.log(admins);
+async function main() {
+  const servers = await client.servers.list();
+  console.log(servers);
 }
 
-main(users);
+main();

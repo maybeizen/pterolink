@@ -13,7 +13,6 @@ import {
   UpdateUserData,
 } from "../../../types/Users";
 import { ValidationError } from "../../../errors/ValidationError";
-import { Filter } from "./Filter";
 
 class Users {
   #client: PteroClient;
@@ -47,7 +46,7 @@ class Users {
     const users = response.data.map(
       (user: UserResponse) => new User(this.#client, user.attributes)
     );
-    return new Filter(users);
+    return users;
   }
 
   public async search(query: string) {
@@ -55,7 +54,7 @@ class Users {
     const mappedUsers = users.map(
       (user: UserResponse) => new User(this.#client, user.attributes)
     );
-    return new Filter(mappedUsers);
+    return mappedUsers;
   }
 
   public async create(data: CreateUserData) {
