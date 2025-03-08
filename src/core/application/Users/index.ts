@@ -17,15 +17,12 @@ import { Filter } from "./Filter";
 
 class Users {
   #client: PteroClient;
-  private cache: Map<number, UserAttributes>;
-  private cacheTimeout: number = 5 * 60 * 1000;
   private requestQueue: Array<() => Promise<any>> = [];
   private isProcessing = false;
   private rateLimit = 10;
 
   constructor(client: PteroClient) {
     this.#client = client;
-    this.cache = new Map();
   }
 
   private async processQueue() {

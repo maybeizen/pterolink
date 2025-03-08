@@ -1,4 +1,4 @@
-import { PteroClient, User } from "pterolink";
+import { PteroClient, User, CreateUserData } from "pterolink";
 import "dotenv/config";
 
 if (!process.env.APPLICATION_API_KEY || !process.env.URL) {
@@ -10,9 +10,35 @@ const client = new PteroClient({
   panelUrl: process.env.URL,
 });
 
-async function main() {
-  const user = (await client.users.list()).rootAdmins().get();
-  console.log(user);
+const users = [
+  {
+    email: "test@test.com",
+    username: "test1",
+    first_name: "Test",
+    last_name: "Test",
+  },
+  {
+    email: "test2@test.com",
+    username: "test2",
+    first_name: "Test",
+    last_name: "Test",
+  },
+  {
+    email: "test3@test.com",
+    username: "test3",
+    first_name: "Test",
+    last_name: "Test",
+  },
+  {
+    email: "test4@test.com",
+    username: "test4",
+    first_name: "Test",
+    last_name: "Test",
+  },
+];
+
+async function main(users: CreateUserData[]) {
+  await client.users.bulkDelete([12, 13, 14, 15]);
 }
 
-main();
+main(users);
