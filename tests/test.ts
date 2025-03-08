@@ -38,7 +38,8 @@ const users = [
 ];
 
 async function main(users: CreateUserData[]) {
-  await client.users.bulkDelete([12, 13, 14, 15]);
+  const admins = (await client.users.list()).limit(1);
+  console.log(admins);
 }
 
 main(users);

@@ -10,31 +10,31 @@ export class Filter {
     this.filteredUsers = [...users];
   }
 
-  public where(field: keyof UserAttributes, value: any): Filter {
+  public where(field: keyof UserAttributes, value: any): User[] {
     this.filteredUsers = this.filteredUsers.filter(
       (user) => user.attributes[field] === value
     );
-    return this;
+    return this.filteredUsers;
   }
 
-  public whereNot(field: keyof UserAttributes, value: any): Filter {
+  public whereNot(field: keyof UserAttributes, value: any): User[] {
     this.filteredUsers = this.filteredUsers.filter(
       (user) => user.attributes[field] !== value
     );
-    return this;
+    return this.filteredUsers;
   }
 
-  public contains(field: keyof UserAttributes, value: string): Filter {
+  public contains(field: keyof UserAttributes, value: string): User[] {
     this.filteredUsers = this.filteredUsers.filter((user) =>
       String(user.attributes[field]).toLowerCase().includes(value.toLowerCase())
     );
-    return this;
+    return this.filteredUsers;
   }
 
   public sort(
     field: keyof UserAttributes,
     order: "asc" | "desc" = "asc"
-  ): Filter {
+  ): User[] {
     this.filteredUsers.sort((a, b) => {
       const valueA = a.attributes[field] ?? "";
       const valueB = b.attributes[field] ?? "";
@@ -45,50 +45,46 @@ export class Filter {
         return valueB < valueA ? -1 : valueB > valueA ? 1 : 0;
       }
     });
-    return this;
+    return this.filteredUsers;
   }
 
-  public limit(count: number): Filter {
+  public limit(count: number): User[] {
     this.filteredUsers = this.filteredUsers.slice(0, count);
-    return this;
+    return this.filteredUsers;
   }
 
-  public offset(count: number): Filter {
+  public offset(count: number): User[] {
     this.filteredUsers = this.filteredUsers.slice(count);
-    return this;
+    return this.filteredUsers;
   }
 
-  public rootAdmins(): Filter {
+  public rootAdmins(): User[] {
     return this.where("root_admin", true);
   }
 
-  public normalUsers(): Filter {
+  public normalUsers(): User[] {
     return this.where("root_admin", false);
   }
 
-  public with2FA(): Filter {
+  public with2FA(): User[] {
     return this.where("2fa", true);
   }
 
-  public without2FA(): Filter {
+  public without2FA(): User[] {
     return this.where("2fa", false);
   }
 
-  public createdBefore(date: Date): Filter {
+  public createdBefore(date: Date): User[] {
     this.filteredUsers = this.filteredUsers.filter(
       (user) => new Date(user.attributes.created_at) < date
     );
-    return this;
+    return this.filteredUsers;
   }
 
-  public createdAfter(date: Date): Filter {
+  public createdAfter(date: Date): User[] {
     this.filteredUsers = this.filteredUsers.filter(
       (user) => new Date(user.attributes.created_at) > date
     );
-    return this;
-  }
-
-  public get(): User[] {
     return this.filteredUsers;
   }
 
