@@ -3,6 +3,7 @@ import { ValidationError } from "../errors/index";
 import { Users, User } from "./application/Users";
 import { Servers, Server } from "./application/Servers";
 import { Nodes, Node as NodeClass } from "./application/Nodes";
+import { Nests, Nest as NestClass } from "./application/Nests";
 
 interface HealthCheckResponse {
   message: string;
@@ -24,6 +25,8 @@ class PteroClient {
   public server: Server;
   public nodes: Nodes;
   public node: NodeClass;
+  public nests: Nests;
+  public nest: NestClass;
 
   constructor(config: PteroClientConfig) {
     this.apiKey = config.apiKey;
@@ -35,6 +38,8 @@ class PteroClient {
     this.server = new Server(this);
     this.nodes = new Nodes(this);
     this.node = new NodeClass(this);
+    this.nests = new Nests(this);
+    this.nest = new NestClass(this);
 
     try {
       new URL(this.panelUrl);

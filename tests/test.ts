@@ -6,6 +6,8 @@ import {
   Server,
   Nodes,
   Node,
+  Nests,
+  Nest,
 } from "pterolink";
 import type { Node as NodeType } from "pterolink";
 import "dotenv/config";
@@ -20,11 +22,9 @@ const client = new PteroClient({
 });
 
 async function main() {
-  const nodes = await client.nodes.list();
+  const nests = await client.nest.get(1);
 
-  nodes.forEach((node: NodeType) => {
-    console.log(node.attributes.allocated_resources);
-  });
+  console.log(nests);
 }
 
 main();
