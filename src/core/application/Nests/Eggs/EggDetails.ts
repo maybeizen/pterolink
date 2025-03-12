@@ -31,7 +31,7 @@ class EggDetails {
       { params }
     );
     return {
-      data: response.data.data,
+      data: response.data,
       status: response.status,
     };
   }

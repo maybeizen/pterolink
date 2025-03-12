@@ -1,15 +1,4 @@
-import {
-  PteroClient,
-  User,
-  CreateUserData,
-  Servers,
-  Server,
-  Nodes,
-  Node,
-  Nests,
-  Nest,
-} from "pterolink";
-import type { Node as NodeType } from "pterolink";
+import { PteroClient } from "pterolink";
 import "dotenv/config";
 
 if (!process.env.APPLICATION_API_KEY || !process.env.URL) {
@@ -22,9 +11,10 @@ const client = new PteroClient({
 });
 
 async function main() {
-  const nests = await client.nest.get(1);
+  const nest = await client.nests.get(1);
+  const egg = await nest.eggs.get(1);
 
-  console.log(nests);
+  console.log(egg);
 }
 
 main();
