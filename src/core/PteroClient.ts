@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { ValidationError } from "../errors/index";
 import { Users, User } from "./application/Users";
 import { Servers, Server } from "./application/Servers";
+import { Nodes, Node as NodeClass } from "./application/Nodes";
 
 interface HealthCheckResponse {
   message: string;
@@ -21,6 +22,8 @@ class PteroClient {
   public user: User;
   public servers: Servers;
   public server: Server;
+  public nodes: Nodes;
+  public node: NodeClass;
 
   constructor(config: PteroClientConfig) {
     this.apiKey = config.apiKey;
@@ -30,6 +33,8 @@ class PteroClient {
     this.user = new User(this);
     this.servers = new Servers(this);
     this.server = new Server(this);
+    this.nodes = new Nodes(this);
+    this.node = new NodeClass(this);
 
     try {
       new URL(this.panelUrl);

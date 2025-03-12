@@ -1,4 +1,13 @@
-import { PteroClient, User, CreateUserData, Servers, Server } from "pterolink";
+import {
+  PteroClient,
+  User,
+  CreateUserData,
+  Servers,
+  Server,
+  Nodes,
+  Node,
+} from "pterolink";
+import type { Node as NodeType } from "pterolink";
 import "dotenv/config";
 
 if (!process.env.APPLICATION_API_KEY || !process.env.URL) {
@@ -11,10 +20,10 @@ const client = new PteroClient({
 });
 
 async function main() {
-  const servers = await client.servers.list();
+  const nodes = await client.nodes.list();
 
-  const server = await (await client.servers.get(1)).unsuspend().then(() => {
-    console.log("Server unsuspended");
+  nodes.forEach((node: NodeType) => {
+    console.log(node.attributes.allocated_resources);
   });
 }
 
