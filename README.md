@@ -10,9 +10,6 @@ A modern, type-safe Node.js library for interacting with the Pterodactyl Panel A
 <br>
 Simple, powerful, and user-friendly.
 
-> [!WARNING]
-> PteroLink is currently in early development. APIs and functionality may change significantly between versions.
-
 [Installation](#-installation) •
 [Features](#-features) •
 [Examples](#-examples) •
@@ -20,6 +17,9 @@ Simple, powerful, and user-friendly.
 [Contributing](#-contributing)
 
 </div>
+
+> [!WARNING]
+> PteroLink is currently in early development. APIs and functionality may change significantly between versions.
 
 ## 📦 Installation
 
