@@ -1,4 +1,4 @@
-import { PteroClient, User, CreateUserData } from "pterolink";
+import { PteroClient, User, CreateUserData, Servers, Server } from "pterolink";
 import "dotenv/config";
 
 if (!process.env.APPLICATION_API_KEY || !process.env.URL) {
@@ -10,36 +10,12 @@ const client = new PteroClient({
   panelUrl: process.env.URL,
 });
 
-const users = [
-  {
-    email: "test@test.com",
-    username: "test1",
-    first_name: "Test",
-    last_name: "Test",
-  },
-  {
-    email: "test2@test.com",
-    username: "test2",
-    first_name: "Test",
-    last_name: "Test",
-  },
-  {
-    email: "test3@test.com",
-    username: "test3",
-    first_name: "Test",
-    last_name: "Test",
-  },
-  {
-    email: "test4@test.com",
-    username: "test4",
-    first_name: "Test",
-    last_name: "Test",
-  },
-];
-
 async function main() {
   const servers = await client.servers.list();
-  console.log(servers);
+
+  const server = await (await client.servers.get(1)).unsuspend().then(() => {
+    console.log("Server unsuspended");
+  });
 }
 
 main();

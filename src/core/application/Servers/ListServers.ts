@@ -1,15 +1,27 @@
 import { PteroClient } from "../../PteroClient";
-import { ServerListResponse } from "../../../types/Servers";
+import { handleApiError } from "../../../errors";
+import { ServerListResponse, ServerQueryParams } from "../../../types/Servers";
 
 export class ListServers {
   private client: PteroClient;
+  private params: ServerQueryParams;
 
-  constructor(client: PteroClient) {
+  constructor(client: PteroClient, params: ServerQueryParams = {}) {
     this.client = client;
+    this.params = params;
   }
 
   async execute(): Promise<ServerListResponse> {
-    const response = await this.client.axios.get("/servers");
-    return response.data as ServerListResponse;
+    try {
+      const response = await this.client.axios.get("/servers", {
+        params: this.params,
+      });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Servers",
+        context: "listing servers",
+      });
+    }
   }
 }
