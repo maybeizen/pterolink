@@ -15,8 +15,7 @@
 
 </div>
 
-> [!WARNING]
-> **Early Development Notice**:
+> [!WARNING] > **Early Development Notice**:
 > PteroLink is in active development. Expect breaking changes before v1.0.0.
 
 ---
@@ -132,7 +131,8 @@ try {
 > [!TIP]
 > Always wrap API calls in `try/catch` blocks to handle errors gracefully.
 
-> [!CAUTION] > **Security Notice:** Never commit API keys to version control. Use environment variables instead.
+> [!CAUTION]
+> **Security Notice:** Never commit API keys to version control. Use environment variables instead.
 
 ---
 
