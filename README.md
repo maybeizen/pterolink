@@ -8,8 +8,6 @@
 
 ### A modern, type-safe Node.js library for interacting with the Pterodactyl Panel API.
 
-#### Simple, powerful, and developer-friendly.
-
 📌 **Quick Links:**
 [Installation](#-installation) • [Features](#-features) • [Usage](#-usage-examples) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
@@ -130,9 +128,6 @@ try {
 
 > [!TIP]
 > Always wrap API calls in `try/catch` blocks to handle errors gracefully.
-
-> [!CAUTION]
-> **Security Notice:** Never commit API keys to version control. Use environment variables instead.
 
 ---
 
