@@ -35,7 +35,7 @@ yarn add pterolink
 pnpm add pterolink
 ```
 
-> [!INFO]
+> [!INFO]  
 > PteroLink requires Node.js **v16+** and TypeScript **4.9+** for best compatibility.
 
 ---
