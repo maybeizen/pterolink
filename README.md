@@ -15,7 +15,7 @@
 
 </div>
 
-> [!DANGER] > **Early Development Notice**
+> [!IMPORTANT] > **Early Development Notice**
 > PteroLink is in active development. Expect breaking changes before v1.0.0.
 
 ---
@@ -35,7 +35,7 @@ yarn add pterolink
 pnpm add pterolink
 ```
 
-> [!INFO]  
+> [!NOTE]
 > PteroLink requires Node.js **v16+** and TypeScript **4.9+** for best compatibility.
 
 ---
@@ -53,7 +53,7 @@ pnpm add pterolink
 
 ## 🚀 Usage Examples
 
-> [!TIP]
+> [!NOTE]
 > All API methods return promises, making them easy to use with `async/await`.
 
 ### 🛠 Creating an Application Client
@@ -131,7 +131,7 @@ try {
 > [!WARNING]
 > Always wrap API calls in `try/catch` blocks to handle errors gracefully.
 
-> [!DANGER] > **Security Notice:** Never commit API keys to version control. Use environment variables instead.
+> [!CAUTION] > **Security Notice:** Never commit API keys to version control. Use environment variables instead.
 
 ---
 
@@ -139,7 +139,7 @@ try {
 
 For full documentation, visit our [GitHub repository](https://github.com/maybeizen/pterolink).
 
-> [!INFO]
+> [!NOTE]
 > Found an issue? Open an [issue](https://github.com/maybeizen/pterolink/issues) or submit a PR!
 
 ---
@@ -156,7 +156,7 @@ We welcome contributions! Follow these steps to contribute:
 
 Check out our [contribution guide](CONTRIBUTING.md) for more details.
 
-> [!SUCCESS]
+> [!TIP]
 > Thank you for contributing! Your help improves PteroLink for everyone.
 
 ---
