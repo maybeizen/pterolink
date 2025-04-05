@@ -13,7 +13,8 @@
 
 </div>
 
-> [!WARNING] > **Early Development Notice**:
+> [!WARNING]
+> **Early Development Notice**:
 > PteroLink is in active development. Expect breaking changes before v1.0.0.
 
 ---
