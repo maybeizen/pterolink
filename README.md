@@ -13,8 +13,7 @@
 
 </div>
 
-> [!WARNING]
-> **Early Development Notice**:
+> [!WARNING] > **Early Development Notice**:
 > PteroLink is in active development. Expect breaking changes before v1.0.0.
 
 ---
@@ -41,7 +40,7 @@ pnpm add pterolink
 
 ## ✨ Features
 
-✅ **Type Safety** - Built with TypeScript for a robust developer experience  
+✅ **Fully Typed** - Built with TypeScript for a robust developer experience  
 ⚡ **Promise-Based** - Supports async/await for seamless API interaction  
 🌐 **Full API Coverage** - Works with both Application and Client API  
 🛡️ **Detailed Error Handling** - Provides meaningful error messages  
