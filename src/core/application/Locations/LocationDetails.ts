@@ -1,22 +1,21 @@
 import { PteroClient } from "../../PteroClient";
 import { handleApiError } from "../../../errors";
-import { NestResponse } from "../../../types/Nests";
 
 /**
- * Handles retrieving details for a specific nest from the Pterodactyl API
+ * Handles retrieving details for a specific location from the Pterodactyl API
  *
- * @internal This class is used internally by the Nest class
+ * @internal This class is used internally by the Location class
  */
-class NestDetails {
+class LocationDetails {
   private client: PteroClient;
   private id: string | number;
   private include: string[];
 
   /**
-   * Create a new NestDetails instance
+   * Create a new LocationDetails instance
    *
    * @param client PteroClient instance
-   * @param id Nest ID to retrieve
+   * @param id Location ID to retrieve
    * @param include Optional relationships to include
    */
   constructor(
@@ -30,7 +29,7 @@ class NestDetails {
   }
 
   /**
-   * Execute the API request to get nest details
+   * Execute the API request to get location details
    *
    * @returns Promise resolving to the API response
    * @throws Error if the API request fails
@@ -38,23 +37,22 @@ class NestDetails {
   async execute() {
     try {
       const params: Record<string, any> = {};
-
       if (this.include.length > 0) {
         params.include = this.include.join(",");
       }
 
-      const response = await this.client.axios.get(`/nests/${this.id}`, {
+      const response = await this.client.axios.get(`/locations/${this.id}`, {
         params,
       });
       return response.data;
     } catch (error) {
       throw handleApiError(error, {
-        resource: "Nest",
+        resource: "Location",
         identifier: this.id,
-        context: "getting nest details",
+        context: "getting location details",
       });
     }
   }
 }
 
-export { NestDetails };
+export { LocationDetails };

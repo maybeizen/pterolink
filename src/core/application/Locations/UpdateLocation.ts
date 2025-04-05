@@ -1,28 +1,28 @@
 import { PteroClient } from "../../PteroClient";
 import { handleApiError } from "../../../errors";
-import { UpdateServerBuildData } from "../../../types/Servers";
+import { UpdateLocationData } from "../../../types/Locations";
 
 /**
- * Handles updating server build configuration in the Pterodactyl API
+ * Handles updating an existing location in the Pterodactyl API
  *
- * @internal This class is used internally by the Server class
+ * @internal This class is used internally by the Location class
  */
-class UpdateServerBuild {
+class UpdateLocation {
   private client: PteroClient;
   private id: string | number;
-  private data: UpdateServerBuildData;
+  private data: UpdateLocationData;
 
   /**
-   * Create a new UpdateServerBuild instance
+   * Create a new UpdateLocation instance
    *
    * @param client PteroClient instance
-   * @param id Server ID to update
-   * @param data Server build update data
+   * @param id Location ID to update
+   * @param data Location update data
    */
   constructor(
     client: PteroClient,
     id: string | number,
-    data: UpdateServerBuildData
+    data: UpdateLocationData
   ) {
     this.client = client;
     this.id = id;
@@ -30,7 +30,7 @@ class UpdateServerBuild {
   }
 
   /**
-   * Execute the API request to update server build
+   * Execute the API request to update a location
    *
    * @returns Promise resolving to the API response
    * @throws Error if the API request fails
@@ -38,18 +38,18 @@ class UpdateServerBuild {
   async execute() {
     try {
       const response = await this.client.axios.patch(
-        `/servers/${this.id}/build`,
+        `/locations/${this.id}`,
         this.data
       );
       return response.data;
     } catch (error) {
       throw handleApiError(error, {
-        resource: "Server",
+        resource: "Location",
         identifier: this.id,
-        context: "updating server build",
+        context: "updating location details",
       });
     }
   }
 }
 
-export { UpdateServerBuild };
+export { UpdateLocation };

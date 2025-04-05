@@ -2,19 +2,19 @@ import { PteroClient } from "../../PteroClient";
 import { handleApiError } from "../../../errors";
 
 /**
- * Handles suspending a server in the Pterodactyl API
+ * Handles deleting a location from the Pterodactyl API
  *
- * @internal This class is used internally by the Server class
+ * @internal This class is used internally by the Location class
  */
-class SuspendServer {
+class DeleteLocation {
   private client: PteroClient;
   private id: string | number;
 
   /**
-   * Create a new SuspendServer instance
+   * Create a new DeleteLocation instance
    *
    * @param client PteroClient instance
-   * @param id Server ID to suspend
+   * @param id Location ID to delete
    */
   constructor(client: PteroClient, id: string | number) {
     this.client = client;
@@ -22,25 +22,22 @@ class SuspendServer {
   }
 
   /**
-   * Execute the API request to suspend a server
+   * Execute the API request to delete a location
    *
-   * @returns Promise resolving to the API response
+   * @returns Promise resolving when the location is deleted
    * @throws Error if the API request fails
    */
   async execute() {
     try {
-      const response = await this.client.axios.post(
-        `/servers/${this.id}/suspend`
-      );
-      return response.data;
+      await this.client.axios.delete(`/locations/${this.id}`);
     } catch (error) {
       throw handleApiError(error, {
-        resource: "Server",
+        resource: "Location",
         identifier: this.id,
-        context: "suspending server",
+        context: "deleting location",
       });
     }
   }
 }
 
-export { SuspendServer };
+export { DeleteLocation };

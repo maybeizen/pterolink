@@ -4,6 +4,7 @@ import { Users, User } from "./application/Users";
 import { Servers, Server } from "./application/Servers";
 import { Nodes, Node as NodeClass } from "./application/Nodes";
 import { Nests, Nest as NestClass } from "./application/Nests";
+import { Locations, Location as LocationClass } from "./application/Locations";
 
 interface HealthCheckResponse {
   message: string;
@@ -27,6 +28,8 @@ class PteroClient {
   public node: NodeClass;
   public nests: Nests;
   public nest: NestClass;
+  public locations: Locations;
+  public location: LocationClass;
 
   constructor(config: PteroClientConfig) {
     this.apiKey = config.apiKey;
@@ -35,11 +38,13 @@ class PteroClient {
     this.users = new Users(this);
     this.user = new User(this);
     this.servers = new Servers(this);
-    this.server = new Server(this);
+    this.server = new Server(this, {} as any);
     this.nodes = new Nodes(this);
     this.node = new NodeClass(this);
     this.nests = new Nests(this);
     this.nest = new NestClass(this);
+    this.locations = new Locations(this);
+    this.location = new LocationClass(this);
 
     try {
       new URL(this.panelUrl);
