@@ -1,5 +1,3 @@
-import { PteroClient } from "../core/PteroClient";
-
 export interface ServerAttributes {
   id: number;
   external_id: string | null;
@@ -121,4 +119,27 @@ export interface ServerStats {
     network_rx_bytes: number;
     network_tx_bytes: number;
   };
+}
+
+export interface ServerFilterOptions extends ServerQueryParams {
+  limit?: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    total: number;
+    count: number;
+    perPage: number;
+    currentPage: number;
+    totalPages: number;
+    links: {
+      next: string | null;
+      previous: string | null;
+    };
+  };
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  fetchNextPage?: () => Promise<PaginatedResult<T>>;
+  fetchPreviousPage?: () => Promise<PaginatedResult<T>>;
 }

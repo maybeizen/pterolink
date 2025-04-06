@@ -1,5 +1,3 @@
-import { PteroClient } from "../core/PteroClient";
-
 export interface UserAttributes {
   id: number;
   external_id: string | null;
@@ -25,18 +23,24 @@ export interface PaginationMeta {
 }
 
 export interface UserResponse {
-  object: "user";
+  object: string;
   attributes: UserAttributes;
+  meta?: {
+    resource?: string;
+  };
 }
 
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: PaginationMeta;
-  links?: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
+  meta: {
+    pagination: {
+      total: number;
+      count: number;
+      per_page: number;
+      current_page: number;
+      total_pages: number;
+      links: Record<string, string>;
+    };
   };
 }
 
@@ -48,6 +52,7 @@ export interface CreateUserData {
   password?: string;
   root_admin?: boolean;
   language?: string;
+  external_id?: string | null;
 }
 
 export interface UpdateUserData {
@@ -55,17 +60,21 @@ export interface UpdateUserData {
   username?: string;
   first_name?: string;
   last_name?: string;
-  language?: string;
   password?: string;
   root_admin?: boolean;
+  language?: string;
+  external_id?: string | null;
 }
 
 export interface UserQueryParams {
   page?: number;
   per_page?: number;
+  include?: string;
   filter?: string;
-  sort?: "id" | "username" | "email" | "uuid" | "created_at" | "updated_at";
-  order?: "asc" | "desc";
+  email?: string;
+  uuid?: string;
+  username?: string;
+  external_id?: string;
 }
 
 export interface UserCacheConfig {

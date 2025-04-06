@@ -1,12 +1,8 @@
 export * from "./errors/index.js";
 export * from "./core/PteroClient.js";
 export * from "./utils/logger.js";
-export * from "./core/application/Users";
-export * from "./core/application/Servers";
-export * from "./core/application/Nodes";
-export * from "./core/application/Nests";
-export * from "./types/Users";
-export { Locations, Location } from "./core/application/Locations";
+export * from "./types";
+export { Locations, Location } from "./core/application/Locations/index.js";
 export type {
   LocationAttributes,
   CreateLocationData,
@@ -14,4 +10,4 @@ export type {
   LocationResponse,
   LocationsResponse,
   LocationQueryParams,
-} from "./types/Locations";
+} from "./types/Locations.js";

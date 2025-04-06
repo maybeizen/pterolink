@@ -1,3 +1,5 @@
+import { ServerAttributes } from "./Servers";
+
 export interface NodeAttributes {
   id: number;
   uuid: string;
@@ -23,33 +25,42 @@ export interface NodeAttributes {
     memory: number;
     disk: number;
   };
-  relationships?: {
-    allocations?: {
-      object: string;
-      data: Array<{
-        object: string;
-        attributes: {
-          id: number;
-          ip: string;
-          alias: string | null;
-          port: number;
-          assigned: boolean;
-          node: number;
-          created_at: string;
-          updated_at: string;
-        };
-      }>;
-    };
-    location?: {
+  relationships?: NodeRelationships;
+}
+
+export interface NodeRelationships {
+  allocations?: {
+    object: string;
+    data: Array<{
       object: string;
       attributes: {
         id: number;
-        short: string;
-        long: string;
+        ip: string;
+        alias: string | null;
+        port: number;
+        assigned: boolean;
+        node: number;
         created_at: string;
         updated_at: string;
       };
+    }>;
+  };
+  location?: {
+    object: string;
+    attributes: {
+      id: number;
+      short: string;
+      long: string;
+      created_at: string;
+      updated_at: string;
     };
+  };
+  servers?: {
+    object: string;
+    data: Array<{
+      object: string;
+      attributes: ServerAttributes;
+    }>;
   };
 }
 
@@ -60,17 +71,7 @@ export interface Node {
 
 export interface NodeListResponse {
   object: string;
-  data: Node[];
-  meta: {
-    pagination: {
-      total: number;
-      count: number;
-      per_page: number;
-      current_page: number;
-      total_pages: number;
-      links: Record<string, string>;
-    };
-  };
+  attributes: NodeAttributes;
 }
 
 export interface NodeDetailsResponse {
@@ -117,4 +118,27 @@ export interface NodeQueryParams {
   page?: number;
   per_page?: number;
   include?: string;
+}
+
+export interface NodeFilterOptions extends NodeQueryParams {
+  limit?: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    total: number;
+    count: number;
+    perPage: number;
+    currentPage: number;
+    totalPages: number;
+    links: {
+      next: string | null;
+      previous: string | null;
+    };
+  };
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  fetchNextPage?: () => Promise<PaginatedResult<T>>;
+  fetchPreviousPage?: () => Promise<PaginatedResult<T>>;
 }

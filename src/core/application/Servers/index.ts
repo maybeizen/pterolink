@@ -1,417 +1,256 @@
 import { PteroClient } from "../../PteroClient";
-import { NotFoundError } from "../../../errors";
-import { ValidationError } from "../../../errors/ValidationError";
+import { handleApiError, ValidationError } from "../../../errors";
 import {
   ServerAttributes,
   ServerResponse,
   CreateServerData,
   UpdateServerDetailsData,
   UpdateServerBuildData,
+  ServerQueryParams,
+  ServerFilterOptions,
+  PaginatedResult,
 } from "../../../types/Servers";
-import { ListServers } from "./ListServers";
-import { ServerDetails } from "./ServerDetails";
-import { CreateServer } from "./CreateServer";
-import { UpdateServerDetails } from "./UpdateServerDetails";
-import { UpdateServerBuild } from "./UpdateServerBuild";
-import { DeleteServer } from "./DeleteServer";
-import { SuspendServer } from "./SuspendServer";
-import { UnsuspendServer } from "./UnsuspendServer";
 
-/**
- * Manages server operations in the Pterodactyl panel
- */
-class Servers {
+export class Servers {
   #client: PteroClient;
-  private requestQueue: Array<() => Promise<any>> = [];
-  private isProcessing = false;
-  private rateLimit = 5; // Lower rate limit for server operations
 
-  /**
-   * Create a new Servers instance
-   *
-   * @param client PteroClient instance
-   */
   constructor(client: PteroClient) {
     this.#client = client;
   }
 
-  /**
-   * Process the request queue with rate limiting
-   *
-   * @private
-   */
-  private async processQueue() {
-    if (this.isProcessing) return;
-    this.isProcessing = true;
+  async all(options: ServerFilterOptions = {}): Promise<Server[]> {
+    try {
+      const { limit, ...params } = options;
 
-    while (this.requestQueue.length > 0) {
-      const request = this.requestQueue.shift();
-      if (request) {
-        await request();
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 / this.rateLimit)
-        );
-      }
-    }
-
-    this.isProcessing = false;
-  }
-
-  /**
-   * Queue a request to be processed with rate limiting
-   *
-   * @private
-   * @param request Function that returns a promise
-   * @returns Promise that resolves with the result of the request
-   */
-  private queueRequest<T>(request: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.requestQueue.push(async () => {
-        try {
-          const result = await request();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+      const countResponse = await this.#client.axios.get("/servers", {
+        params: { ...params, per_page: 1 },
       });
 
-      this.processQueue();
-    });
+      const totalServers = countResponse.data.meta.pagination.total;
+
+      const response = await this.#client.axios.get("/servers", {
+        params: { ...params, per_page: totalServers },
+      });
+
+      let servers = response.data.data.map(
+        (serverData: ServerResponse) =>
+          new Server(this.#client, serverData.attributes)
+      );
+
+      if (limit && limit > 0) {
+        servers = servers.slice(0, limit);
+      }
+
+      return servers;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Servers",
+        context: "getting all servers",
+      });
+    }
   }
 
-  /**
-   * List all servers
-   *
-   * @param params Optional query parameters
-   * @returns Promise resolving to an array of Server instances
-   *
-   * @example
-   * // Get all servers
-   * const servers = await client.servers.list();
-   */
-  public async list(params = {}) {
-    const response = await this.queueRequest(() =>
-      new ListServers(this.#client, params).execute()
-    );
+  async paginate(
+    options: ServerFilterOptions = {}
+  ): Promise<PaginatedResult<Server>> {
+    try {
+      const { limit, ...params } = options;
+      const page = params.page || 1;
+      const perPage = params.per_page || 50;
 
-    return response.data.map(
-      (server: ServerResponse) => new Server(this.#client, server.attributes)
-    );
+      const response = await this.#client.axios.get("/servers", {
+        params: { ...params, page, per_page: perPage },
+      });
+
+      let servers = response.data.data.map(
+        (serverData: ServerResponse) =>
+          new Server(this.#client, serverData.attributes)
+      );
+
+      const pagination = {
+        total: response.data.meta.pagination.total,
+        count: response.data.meta.pagination.count,
+        perPage: response.data.meta.pagination.per_page,
+        currentPage: response.data.meta.pagination.current_page,
+        totalPages: response.data.meta.pagination.total_pages,
+        links: {
+          next: response.data.meta.pagination.links.next || null,
+          previous: response.data.meta.pagination.links.prev || null,
+        },
+      };
+
+      const hasNextPage = pagination.currentPage < pagination.totalPages;
+      const hasPreviousPage = pagination.currentPage > 1;
+
+      const result: PaginatedResult<Server> = {
+        data: servers,
+        pagination,
+        hasNextPage,
+        hasPreviousPage,
+      };
+
+      if (hasNextPage) {
+        result.fetchNextPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage + 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      if (hasPreviousPage) {
+        result.fetchPreviousPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage - 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      return result;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Servers",
+        context: "paginating servers",
+      });
+    }
   }
 
-  /**
-   * Get a server by ID
-   *
-   * @param id Server ID
-   * @param external Whether to use external ID
-   * @returns Promise resolving to a Server instance
-   *
-   * @example
-   * // Get server by ID
-   * const server = await client.servers.get(1);
-   */
-  public async get(id: string | number, external: boolean = false) {
-    const response = await this.queueRequest(() =>
-      new ServerDetails(this.#client, id, external).execute()
-    );
-
-    return new Server(this.#client, response.attributes);
+  async get(id: string | number, external: boolean = false): Promise<Server> {
+    try {
+      const endpoint = external ? `/servers/external/${id}` : `/servers/${id}`;
+      const response = await this.#client.axios.get(endpoint);
+      return new Server(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: id,
+        context: `getting server${external ? " by external ID" : ""}`,
+      });
+    }
   }
 
-  /**
-   * Create a new server
-   *
-   * @param data Server creation data
-   * @returns Promise resolving to a Server instance
-   *
-   * @example
-   * // Create a new server
-   * const newServer = await client.servers.create({
-   *   name: "My Server",
-   *   user: 1,
-   *   egg: 1,
-   *   // other required fields...
-   * });
-   */
-  public async create(data: CreateServerData) {
-    const response = await this.queueRequest(() =>
-      new CreateServer(this.#client, data).execute()
-    );
-
-    return new Server(this.#client, response.attributes);
+  async create(data: CreateServerData): Promise<Server> {
+    try {
+      const response = await this.#client.axios.post("/servers", data);
+      return new Server(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: data.name,
+        context: "creating server",
+      });
+    }
   }
 
-  public async delete(id: string | number, force: boolean = false) {
-    await new DeleteServer(this.#client, id, force).execute();
+  async delete(id: string | number, force: boolean = false): Promise<void> {
+    try {
+      await this.#client.axios.delete(`/servers/${id}${force ? "/force" : ""}`);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: id,
+        context: `${force ? "force " : ""}deleting server`,
+      });
+    }
   }
 
-  public async suspend(id: string | number) {
-    const response = await new SuspendServer(this.#client, id).execute();
-    return new Server(this.#client, response.attributes);
+  async suspend(id: string | number): Promise<Server> {
+    try {
+      const response = await this.#client.axios.post(`/servers/${id}/suspend`);
+      return new Server(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: id,
+        context: "suspending server",
+      });
+    }
   }
 
-  public async unsuspend(id: string | number) {
-    const response = await new UnsuspendServer(this.#client, id).execute();
-    return new Server(this.#client, response.attributes);
+  async unsuspend(id: string | number): Promise<Server> {
+    try {
+      const response = await this.#client.axios.post(
+        `/servers/${id}/unsuspend`
+      );
+      return new Server(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: id,
+        context: "unsuspending server",
+      });
+    }
   }
 
-  public async bulkCreate(servers: CreateServerData[]) {
-    const createdServers = await Promise.all(
-      servers.map((serverData) => this.create(serverData))
-    );
-    return createdServers;
+  async bulkCreate(servers: CreateServerData[]): Promise<Server[]> {
+    return Promise.all(servers.map((serverData) => this.create(serverData)));
   }
 
-  public async bulkDelete(ids: (string | number)[], force: boolean = false) {
+  async bulkDelete(
+    ids: (string | number)[],
+    force: boolean = false
+  ): Promise<void> {
     await Promise.all(ids.map((id) => this.delete(id, force)));
   }
 }
 
-/**
- * Represents a single server in the Pterodactyl panel
- */
-class Server {
+export class Server {
   #client: PteroClient;
-  public attributes: ServerAttributes;
+  attributes: ServerAttributes;
 
-  /**
-   * Create a new Server instance
-   *
-   * @param client PteroClient instance
-   * @param attributes Server attributes
-   */
   constructor(client: PteroClient, attributes: ServerAttributes) {
     this.#client = client;
     this.attributes = attributes;
   }
 
-  /**
-   * Get server details
-   *
-   * @returns Promise resolving to updated Server instance
-   *
-   * @example
-   * // Refresh server details
-   * const updatedServer = await server.getDetails();
-   */
-  public async getDetails() {
-    const response = await new ServerDetails(
-      this.#client,
-      this.attributes.id
-    ).execute();
-
-    this.attributes = response.attributes;
-    return this;
+  get getAttributes(): ServerAttributes {
+    return this.attributes;
   }
 
-  /**
-   * Update server details
-   *
-   * @param data Server details update data
-   * @returns Promise resolving to updated Server instance
-   *
-   * @example
-   * // Update server name
-   * await server.updateDetails({ name: "New Server Name" });
-   */
-  public async updateDetails(data: UpdateServerDetailsData) {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Server", "unknown");
-    }
-
-    if (!Object.keys(data).length) {
-      throw new ValidationError("No update fields provided");
-    }
-
-    const response = await new UpdateServerDetails(
-      this.#client,
-      this.attributes.id,
-      data
-    ).execute();
-
-    this.attributes = response.attributes;
-    return this;
+  get id(): number {
+    return this.attributes.id;
   }
 
-  /**
-   * Update server build configuration
-   *
-   * @param data Server build update data
-   * @returns Promise resolving to updated Server instance
-   *
-   * @example
-   * // Update server memory limit
-   * await server.updateBuild({
-   *   limits: { memory: 2048 }
-   * });
-   */
-  public async updateBuild(data: UpdateServerBuildData) {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Server", "unknown");
-    }
-
-    if (!Object.keys(data).length) {
-      throw new ValidationError("No update fields provided");
-    }
-
-    const response = await new UpdateServerBuild(
-      this.#client,
-      this.attributes.id,
-      data
-    ).execute();
-
-    this.attributes = response.attributes;
-    return this;
+  get externalId(): string | null {
+    return this.attributes.external_id;
   }
 
-  /**
-   * Suspend the server
-   *
-   * @returns Promise resolving to updated Server instance
-   *
-   * @example
-   * // Suspend a server
-   * await server.suspend();
-   */
-  public async suspend() {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Server", "unknown");
-    }
-
-    await new SuspendServer(this.#client, this.attributes.id).execute();
-    this.attributes.suspended = true;
-    return this;
+  get uuid(): string {
+    return this.attributes.uuid;
   }
 
-  /**
-   * Unsuspend the server
-   *
-   * @returns Promise resolving to updated Server instance
-   *
-   * @example
-   * // Unsuspend a server
-   * await server.unsuspend();
-   */
-  public async unsuspend() {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Server", "unknown");
-    }
-
-    await new UnsuspendServer(this.#client, this.attributes.id).execute();
-    this.attributes.suspended = false;
-    return this;
+  get identifier(): string {
+    return this.attributes.identifier;
   }
 
-  /**
-   * Delete the server
-   *
-   * @param force Whether to force delete the server
-   * @returns Promise resolving when the server is deleted
-   *
-   * @example
-   * // Delete a server
-   * await server.delete();
-   *
-   * // Force delete a server
-   * await server.delete(true);
-   */
-  public async delete(force: boolean = false) {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Server", "unknown");
-    }
-
-    await new DeleteServer(this.#client, this.attributes.id, force).execute();
+  get name(): string {
+    return this.attributes.name;
   }
 
-  /**
-   * Get server ID
-   *
-   * @returns Server ID
-   */
-  public getId(): number {
-    return this.attributes?.id || 0;
+  get description(): string {
+    return this.attributes.description;
   }
 
-  /**
-   * Get server UUID
-   *
-   * @returns Server UUID
-   */
-  public getUuid(): string {
-    return this.attributes?.uuid || "";
+  get suspended(): boolean {
+    return this.attributes.suspended;
   }
 
-  /**
-   * Get server identifier
-   *
-   * @returns Server identifier
-   */
-  public getIdentifier(): string {
-    return this.attributes?.identifier || "";
+  get node(): number {
+    return this.attributes.node;
   }
 
-  /**
-   * Get server name
-   *
-   * @returns Server name
-   */
-  public getName(): string {
-    return this.attributes?.name || "";
+  get user(): number {
+    return this.attributes.user;
   }
 
-  /**
-   * Get server description
-   *
-   * @returns Server description
-   */
-  public getDescription(): string {
-    return this.attributes?.description || "";
+  get allocation(): number {
+    return this.attributes.allocation;
   }
 
-  /**
-   * Check if server is suspended
-   *
-   * @returns True if server is suspended
-   */
-  public isSuspended(): boolean {
-    return this.attributes?.suspended || false;
-  }
-
-  /**
-   * Get server node ID
-   *
-   * @returns Node ID
-   */
-  public getNodeId(): number {
-    return this.attributes?.node || 0;
-  }
-
-  /**
-   * Get server user ID
-   *
-   * @returns User ID
-   */
-  public getUserId(): number {
-    return this.attributes?.user || 0;
-  }
-
-  /**
-   * Get server allocation ID
-   *
-   * @returns Allocation ID
-   */
-  public getAllocationId(): number {
-    return this.attributes?.allocation || 0;
-  }
-
-  /**
-   * Get server resource limits
-   *
-   * @returns Server resource limits
-   */
-  public getLimits() {
+  get limits() {
     return (
-      this.attributes?.limits || {
+      this.attributes.limits || {
         memory: 0,
         swap: 0,
         disk: 0,
@@ -422,14 +261,9 @@ class Server {
     );
   }
 
-  /**
-   * Get server feature limits
-   *
-   * @returns Server feature limits
-   */
-  public getFeatureLimits() {
+  get featureLimits() {
     return (
-      this.attributes?.feature_limits || {
+      this.attributes.feature_limits || {
         databases: 0,
         allocations: 0,
         backups: 0,
@@ -437,34 +271,136 @@ class Server {
     );
   }
 
-  /**
-   * Convert server to a simple object representation
-   *
-   * @returns Simple object with key server properties
-   */
+  get createdAt(): Date {
+    return new Date(this.attributes.created_at);
+  }
+
+  get updatedAt(): Date {
+    return new Date(this.attributes.updated_at);
+  }
+
+  async getDetails(): Promise<Server> {
+    try {
+      const response = await this.#client.axios.get(`/servers/${this.id}`);
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: "getting server details",
+      });
+    }
+  }
+
+  async updateDetails(data: UpdateServerDetailsData): Promise<Server> {
+    if (!Object.keys(data).length) {
+      throw new ValidationError("No update fields provided");
+    }
+
+    try {
+      const response = await this.#client.axios.patch(
+        `/servers/${this.id}/details`,
+        data
+      );
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: "updating server details",
+      });
+    }
+  }
+
+  async updateBuild(data: UpdateServerBuildData): Promise<Server> {
+    if (!Object.keys(data).length) {
+      throw new ValidationError("No update fields provided");
+    }
+
+    try {
+      const response = await this.#client.axios.patch(
+        `/servers/${this.id}/build`,
+        data
+      );
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: "updating server build",
+      });
+    }
+  }
+
+  async suspend(): Promise<Server> {
+    try {
+      const response = await this.#client.axios.post(
+        `/servers/${this.id}/suspend`
+      );
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: "suspending server",
+      });
+    }
+  }
+
+  async unsuspend(): Promise<Server> {
+    try {
+      const response = await this.#client.axios.post(
+        `/servers/${this.id}/unsuspend`
+      );
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: "unsuspending server",
+      });
+    }
+  }
+
+  async delete(force: boolean = false): Promise<void> {
+    try {
+      await this.#client.axios.delete(
+        `/servers/${this.id}${force ? "/force" : ""}`
+      );
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Server",
+        identifier: this.id,
+        context: `${force ? "force " : ""}deleting server`,
+      });
+    }
+  }
+
   public toJSON() {
     return {
-      id: this.getId(),
-      uuid: this.getUuid(),
-      identifier: this.getIdentifier(),
-      name: this.getName(),
-      description: this.getDescription(),
-      suspended: this.isSuspended(),
-      node: this.getNodeId(),
-      user: this.getUserId(),
-      limits: this.getLimits(),
-      featureLimits: this.getFeatureLimits(),
+      id: this.id,
+      externalId: this.externalId,
+      uuid: this.uuid,
+      identifier: this.identifier,
+      name: this.name,
+      description: this.description,
+      suspended: this.suspended,
+      node: this.node,
+      user: this.user,
+      allocation: this.allocation,
+      limits: this.limits,
+      featureLimits: this.featureLimits,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
     };
   }
 
-  /**
-   * String representation of the server
-   *
-   * @returns String representation
-   */
   public toString(): string {
-    return `Server(${this.getId()}: ${this.getName()})`;
+    return `Server(${this.id}: ${this.name})`;
   }
 }
-
-export { Servers, Server };

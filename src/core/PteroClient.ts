@@ -36,11 +36,11 @@ class PteroClient {
     this.panelUrl = config.panelUrl;
 
     this.users = new Users(this);
-    this.user = new User(this);
+    this.user = new User(this, {} as any);
     this.servers = new Servers(this);
     this.server = new Server(this, {} as any);
     this.nodes = new Nodes(this);
-    this.node = new NodeClass(this);
+    this.node = new NodeClass(this, {} as any);
     this.nests = new Nests(this);
     this.nest = new NestClass(this);
     this.locations = new Locations(this);

@@ -9,13 +9,12 @@ const config = {
 const client = new PteroClient(config);
 
 async function main() {
-  let servers = await client.servers.list();
-
-  const sortedServers = servers.sort((a, b) => {
-    return b.attributes.suspended - a.attributes.suspended;
-  });
-
-  console.log(sortedServers);
+  try {
+    const nodes = await client.users.all();
+    nodes.forEach((node) => console.log(node.username));
+  } catch (error) {
+    console.error("Error:", error.message);
+  }
 }
 
 main();

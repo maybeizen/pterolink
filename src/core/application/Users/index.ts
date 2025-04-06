@@ -1,387 +1,381 @@
 import { PteroClient } from "../../PteroClient";
-import { NotFoundError } from "../../../errors";
-import { ValidationError } from "../../../errors/ValidationError";
-import { ListUsers } from "./ListUsers";
-import { UserDetails } from "./UserDetails";
-import { CreateUser } from "./CreateUser";
-import { UpdateUser } from "./UpdateUser";
-import { DeleteUser } from "./DeleteUser";
-import { SearchUsers } from "./SearchUsers";
+import { handleApiError } from "../../../errors";
 import {
   UserAttributes,
   UserResponse,
   CreateUserData,
   UpdateUserData,
+  UserQueryParams,
+  PaginatedResponse,
 } from "../../../types/Users";
 
-/**
- * Manages user operations in the Pterodactyl panel
- */
-class Users {
-  #client: PteroClient;
-  private requestQueue: Array<() => Promise<any>> = [];
-  private isProcessing = false;
-  private rateLimit = 10;
+export interface UserFilterOptions extends UserQueryParams {
+  limit?: number;
+  adminsOnly?: boolean;
+}
 
-  /**
-   * Create a new Users instance
-   *
-   * @param client PteroClient instance
-   */
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    total: number;
+    count: number;
+    perPage: number;
+    currentPage: number;
+    totalPages: number;
+    links: {
+      next: string | null;
+      previous: string | null;
+    };
+  };
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  fetchNextPage?: () => Promise<PaginatedResult<T>>;
+  fetchPreviousPage?: () => Promise<PaginatedResult<T>>;
+}
+
+export class Users {
+  #client: PteroClient;
+
   constructor(client: PteroClient) {
     this.#client = client;
   }
 
-  /**
-   * Process the request queue with rate limiting
-   *
-   * @private
-   */
-  private async processQueue() {
-    if (this.isProcessing) return;
-    this.isProcessing = true;
+  async all(options: UserFilterOptions = {}): Promise<User[]> {
+    try {
+      const { limit, adminsOnly, ...params } = options;
 
-    while (this.requestQueue.length > 0) {
-      const request = this.requestQueue.shift();
-      if (request) {
-        await request();
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 / this.rateLimit)
-        );
-      }
-    }
-
-    this.isProcessing = false;
-  }
-
-  /**
-   * Queue a request to be processed with rate limiting
-   *
-   * @private
-   * @param request Function that returns a promise
-   * @returns Promise that resolves with the result of the request
-   */
-  private queueRequest<T>(request: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.requestQueue.push(async () => {
-        try {
-          const result = await request();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+      const countResponse = await this.#client.axios.get("/users", {
+        params: { ...params, per_page: 1 },
       });
 
-      this.processQueue();
-    });
+      const totalUsers = countResponse.data.meta.pagination.total;
+
+      const response = await this.#client.axios.get("/users", {
+        params: { ...params, per_page: totalUsers },
+      });
+
+      let users = response.data.data.map(
+        (userData: UserResponse) => new User(this.#client, userData.attributes)
+      );
+
+      if (adminsOnly) {
+        users = users.filter((user: User) => user.isAdmin);
+      }
+
+      if (limit && limit > 0) {
+        users = users.slice(0, limit);
+      }
+
+      return users;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Users",
+        context: "getting all users",
+      });
+    }
   }
 
-  /**
-   * List all users in the panel
-   *
-   * @param params Optional query parameters
-   * @returns Promise resolving to an array of User instances
-   *
-   * @example
-   * // Get all users
-   * const users = await client.users.list();
-   */
-  async list(params = {}) {
-    const response = await this.queueRequest(() =>
-      new ListUsers(this.#client, params).execute()
-    );
+  async paginate(
+    options: UserFilterOptions = {}
+  ): Promise<PaginatedResult<User>> {
+    try {
+      const { limit, adminsOnly, ...params } = options;
+      const page = params.page || 1;
+      const perPage = params.per_page || 50;
 
-    return response.data.map((userData) => {
-      const user = new User(this.#client);
-      user.attributes = userData.attributes;
-      return user;
-    });
+      const response = await this.#client.axios.get("/users", {
+        params: { ...params, page, per_page: perPage },
+      });
+
+      let users = response.data.data.map(
+        (userData: UserResponse) => new User(this.#client, userData.attributes)
+      );
+
+      if (adminsOnly) {
+        users = users.filter((user: User) => user.isAdmin);
+      }
+
+      const pagination = {
+        total: response.data.meta.pagination.total,
+        count: response.data.meta.pagination.count,
+        perPage: response.data.meta.pagination.per_page,
+        currentPage: response.data.meta.pagination.current_page,
+        totalPages: response.data.meta.pagination.total_pages,
+        links: {
+          next: response.data.meta.pagination.links.next || null,
+          previous: response.data.meta.pagination.links.prev || null,
+        },
+      };
+
+      const hasNextPage = pagination.currentPage < pagination.totalPages;
+      const hasPreviousPage = pagination.currentPage > 1;
+
+      const result: PaginatedResult<User> = {
+        data: users,
+        pagination,
+        hasNextPage,
+        hasPreviousPage,
+      };
+
+      if (hasNextPage) {
+        result.fetchNextPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage + 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      if (hasPreviousPage) {
+        result.fetchPreviousPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage - 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      return result;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Users",
+        context: "paginating users",
+      });
+    }
   }
 
-  /**
-   * Search for users by a query string
-   *
-   * @param query Search query
-   * @returns Promise resolving to an array of User instances
-   *
-   * @example
-   * // Search for users with "admin" in their username or email
-   * const adminUsers = await client.users.search("admin");
-   */
-  async search(query: string) {
-    const results = await this.queueRequest(() =>
-      new SearchUsers(this.#client, query).execute()
-    );
+  async search(query: string): Promise<User[]> {
+    try {
+      const response = await this.#client.axios.get("/users", {
+        params: { filter: query },
+      });
 
-    return results.map((userData: any) => {
-      const user = new User(this.#client);
-      user.attributes = userData.attributes;
-      return user;
-    });
+      console.log("Search results:", response.data);
+
+      return response.data.data.map(
+        (userData: UserResponse) => new User(this.#client, userData.attributes)
+      );
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Users",
+        identifier: query,
+        context: "searching users",
+      });
+    }
   }
 
-  /**
-   * Get a user by ID
-   *
-   * @param id User ID
-   * @param external Whether to use external ID
-   * @returns Promise resolving to a User instance
-   *
-   * @example
-   * // Get user with ID 1
-   * const user = await client.users.get(1);
-   */
-  async get(id: number, external: boolean = false) {
-    const response = await this.queueRequest(() =>
-      new UserDetails(this.#client, id, external).execute()
-    );
+  async searchPaginated(
+    query: string,
+    page: number = 1,
+    perPage: number = 50
+  ): Promise<PaginatedResult<User>> {
+    try {
+      const response = await this.#client.axios.get("/users", {
+        params: {
+          filter: query,
+          page,
+          per_page: perPage,
+        },
+      });
 
-    const user = new User(this.#client);
-    user.attributes = response.attributes;
-    return user;
+      const users = response.data.data.map(
+        (userData: UserResponse) => new User(this.#client, userData.attributes)
+      );
+
+      const pagination = {
+        total: response.data.meta.pagination.total,
+        count: response.data.meta.pagination.count,
+        perPage: response.data.meta.pagination.per_page,
+        currentPage: response.data.meta.pagination.current_page,
+        totalPages: response.data.meta.pagination.total_pages,
+        links: {
+          next: response.data.meta.pagination.links.next || null,
+          previous: response.data.meta.pagination.links.prev || null,
+        },
+      };
+
+      const hasNextPage = pagination.currentPage < pagination.totalPages;
+      const hasPreviousPage = pagination.currentPage > 1;
+
+      const result: PaginatedResult<User> = {
+        data: users,
+        pagination,
+        hasNextPage,
+        hasPreviousPage,
+      };
+
+      if (hasNextPage) {
+        result.fetchNextPage = () =>
+          this.searchPaginated(
+            query,
+            pagination.currentPage + 1,
+            pagination.perPage
+          );
+      }
+
+      if (hasPreviousPage) {
+        result.fetchPreviousPage = () =>
+          this.searchPaginated(
+            query,
+            pagination.currentPage - 1,
+            pagination.perPage
+          );
+      }
+
+      return result;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Users",
+        identifier: query,
+        context: "searching users with pagination",
+      });
+    }
   }
 
-  /**
-   * Create a new user
-   *
-   * @param data User creation data
-   * @returns Promise resolving to the created User instance
-   *
-   * @example
-   * // Create a new user
-   * const newUser = await client.users.create({
-   *   username: "newuser",
-   *   email: "user@example.com",
-   *   first_name: "New",
-   *   last_name: "User",
-   *   password: "securepassword"
-   * });
-   */
-  async create(data: CreateUserData) {
-    const response = await this.queueRequest(() =>
-      new CreateUser(this.#client, data).execute()
-    );
-
-    const user = new User(this.#client);
-    user.attributes = response.attributes;
-    return user;
+  async get(id: number, external: boolean = false): Promise<User> {
+    try {
+      const endpoint = external ? `/users/external/${id}` : `/users/${id}`;
+      const response = await this.#client.axios.get(endpoint);
+      return new User(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: id,
+        context: `getting user${external ? " by external ID" : ""}`,
+      });
+    }
   }
 
-  public async delete(id: number) {
-    await new DeleteUser(this.#client, id).execute();
+  async create(data: CreateUserData): Promise<User> {
+    try {
+      const response = await this.#client.axios.post("/users", data);
+      return new User(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: data.username,
+        context: "creating user",
+      });
+    }
   }
 
-  public async bulkCreate(users: CreateUserData[]) {
-    const createdUsers = await Promise.all(
-      users.map((userData) => this.create(userData))
-    );
-    return createdUsers;
+  async delete(id: number): Promise<void> {
+    try {
+      await this.#client.axios.delete(`/users/${id}`);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: id,
+        context: "deleting user",
+      });
+    }
   }
 
-  public async bulkDelete(ids: number[]) {
+  async bulkCreate(users: CreateUserData[]): Promise<User[]> {
+    return Promise.all(users.map((userData) => this.create(userData)));
+  }
+
+  async bulkDelete(ids: number[]): Promise<void> {
     await Promise.all(ids.map((id) => this.delete(id)));
   }
 }
 
-/**
- * Represents a user in the Pterodactyl panel
- */
-class User {
+export class User {
   #client: PteroClient;
   attributes: UserAttributes;
 
-  /**
-   * Create a new User instance
-   *
-   * @param client PteroClient instance
-   */
-  constructor(client: PteroClient) {
+  constructor(client: PteroClient, attributes: UserAttributes) {
     this.#client = client;
-    this.attributes = {} as UserAttributes;
+    this.attributes = attributes;
   }
 
-  /**
-   * Get user ID
-   *
-   * @returns User ID
-   */
-  public getId(): number {
-    return this.attributes?.id || 0;
+  get id(): number {
+    return this.attributes.id;
+  }
+  get externalId(): string | null {
+    return this.attributes.external_id;
+  }
+  get uuid(): string {
+    return this.attributes.uuid;
+  }
+  get username(): string {
+    return this.attributes.username;
+  }
+  get email(): string {
+    return this.attributes.email;
+  }
+  get firstName(): string {
+    return this.attributes.first_name;
+  }
+  get lastName(): string {
+    return this.attributes.last_name;
+  }
+  get fullName(): string {
+    return `${this.firstName} ${this.lastName}`.trim();
+  }
+  get language(): string {
+    return this.attributes.language;
+  }
+  get isAdmin(): boolean {
+    return this.attributes.root_admin;
+  }
+  get has2FA(): boolean {
+    return this.attributes["2fa"];
+  }
+  get createdAt(): Date {
+    return new Date(this.attributes.created_at);
+  }
+  get updatedAt(): Date {
+    return new Date(this.attributes.updated_at);
   }
 
-  /**
-   * Get user external ID
-   *
-   * @returns User external ID or null
-   */
-  public getExternalId(): string | null {
-    return this.attributes?.external_id;
-  }
-
-  /**
-   * Get user UUID
-   *
-   * @returns User UUID
-   */
-  public getUuid(): string {
-    return this.attributes?.uuid || "";
-  }
-
-  /**
-   * Get username
-   *
-   * @returns Username
-   */
-  public getUsername(): string {
-    return this.attributes?.username || "";
-  }
-
-  /**
-   * Get user email
-   *
-   * @returns User email
-   */
-  public getEmail(): string {
-    return this.attributes?.email || "";
-  }
-
-  /**
-   * Get user first name
-   *
-   * @returns User first name
-   */
-  public getFirstName(): string {
-    return this.attributes?.first_name || "";
-  }
-
-  /**
-   * Get user last name
-   *
-   * @returns User last name
-   */
-  public getLastName(): string {
-    return this.attributes?.last_name || "";
-  }
-
-  /**
-   * Get user full name
-   *
-   * @returns User full name
-   */
-  public getFullName(): string {
-    return `${this.getFirstName()} ${this.getLastName()}`.trim();
-  }
-
-  /**
-   * Check if user is an admin
-   *
-   * @returns True if user is an admin
-   */
-  public isAdmin(): boolean {
-    return this.attributes?.root_admin || false;
-  }
-
-  /**
-   * Check if user has 2FA enabled
-   *
-   * @returns True if 2FA is enabled
-   */
-  public has2FA(): boolean {
-    return this.attributes?.["2fa"] || false;
-  }
-
-  /**
-   * Get user creation date
-   *
-   * @returns Creation date string
-   */
-  public getCreatedAt(): string {
-    return this.attributes?.created_at || "";
-  }
-
-  /**
-   * Get user last update date
-   *
-   * @returns Last update date string
-   */
-  public getUpdatedAt(): string {
-    return this.attributes?.updated_at || "";
-  }
-
-  /**
-   * Update user details
-   *
-   * @param data User update data
-   * @returns Promise resolving to the updated User instance
-   *
-   * @example
-   * // Update user email
-   * await user.update({ email: "newemail@example.com" });
-   */
-  public async update(data: UpdateUserData) {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("User", "unknown");
+  async update(data: UpdateUserData): Promise<User> {
+    try {
+      const response = await this.#client.axios.patch(
+        `/users/${this.id}`,
+        data
+      );
+      return new User(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: this.id,
+        context: "updating user",
+      });
     }
-
-    if (!Object.keys(data).length) {
-      throw new ValidationError("No update fields provided");
-    }
-
-    const response = await new UpdateUser(
-      this.#client,
-      this.attributes.id,
-      data
-    ).execute();
-
-    this.attributes = response.attributes;
-    return this;
   }
 
-  /**
-   * Delete the user
-   *
-   * @returns Promise resolving when the user is deleted
-   *
-   * @example
-   * // Delete the user
-   * await user.delete();
-   */
-  public async delete() {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("User", "unknown");
+  async delete(): Promise<void> {
+    try {
+      await this.#client.axios.delete(`/users/${this.id}`);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "User",
+        identifier: this.id,
+        context: "deleting user",
+      });
     }
-    await new DeleteUser(this.#client, this.attributes.id).execute();
   }
 
-  /**
-   * Convert user to a simple object representation
-   *
-   * @returns Simple object with key user properties
-   */
-  public toJSON() {
+  toJSON() {
     return {
-      id: this.getId(),
-      uuid: this.getUuid(),
-      username: this.getUsername(),
-      email: this.getEmail(),
-      firstName: this.getFirstName(),
-      lastName: this.getLastName(),
-      fullName: this.getFullName(),
-      isAdmin: this.isAdmin(),
-      has2FA: this.has2FA(),
-      createdAt: this.getCreatedAt(),
-      updatedAt: this.getUpdatedAt(),
+      id: this.id,
+      externalId: this.externalId,
+      uuid: this.uuid,
+      username: this.username,
+      email: this.email,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      fullName: this.fullName,
+      language: this.language,
+      isAdmin: this.isAdmin,
+      has2FA: this.has2FA,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
     };
   }
 
-  /**
-   * String representation of the user
-   *
-   * @returns String representation
-   */
-  public toString(): string {
-    return `User(${this.getId()}: ${this.getUsername()})`;
+  toString(): string {
+    return `User(${this.id}: ${this.username})`;
   }
 }
-
-export { Users, User };

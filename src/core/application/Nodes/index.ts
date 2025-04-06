@@ -1,342 +1,365 @@
 import { PteroClient } from "../../PteroClient";
-import { NotFoundError } from "../../../errors";
-import { ValidationError } from "../../../errors/ValidationError";
-import { ListNodes } from "./ListNodes";
-import { NodeDetails } from "./NodeDetails";
-import { CreateNode } from "./CreateNode";
-import { UpdateNode } from "./UpdateNode";
-import { DeleteNode } from "./DeleteNode";
+import { handleApiError, ValidationError } from "../../../errors";
 import {
   NodeAttributes,
   NodeDetailsResponse,
   CreateNodeData,
   UpdateNodeData,
   NodeQueryParams,
+  NodeListResponse,
+  PaginatedResult,
+  NodeFilterOptions,
+  NodeRelationships,
 } from "../../../types/Nodes";
 
-/**
- * Manages node operations in the Pterodactyl panel
- */
-class Nodes {
+export class Nodes {
   #client: PteroClient;
 
-  /**
-   * Create a new Nodes instance
-   *
-   * @param client PteroClient instance
-   */
   constructor(client: PteroClient) {
     this.#client = client;
   }
 
-  /**
-   * List all nodes in the panel
-   *
-   * @param params Optional query parameters
-   * @returns Promise resolving to an array of Node instances
-   *
-   * @example
-   * // Get all nodes
-   * const nodes = await client.nodes.list();
-   */
-  async list(params: NodeQueryParams = {}) {
-    const response = await new ListNodes(this.#client, params).execute();
+  async all(options: NodeFilterOptions = {}): Promise<Node[]> {
+    try {
+      const { limit, ...params } = options;
 
-    return response.data.map((nodeData) => {
-      const node = new Node(this.#client);
-      node.attributes = nodeData.attributes;
-      return node;
-    });
+      const countResponse = await this.#client.axios.get("/nodes", {
+        params: { ...params, per_page: 1 },
+      });
+
+      const totalNodes = countResponse.data.meta.pagination.total;
+
+      const response = await this.#client.axios.get("/nodes", {
+        params: { ...params, per_page: totalNodes },
+      });
+
+      let nodes = response.data.data.map(
+        (nodeData: NodeListResponse) =>
+          new Node(this.#client, nodeData.attributes)
+      );
+
+      if (limit && limit > 0) {
+        nodes = nodes.slice(0, limit);
+      }
+
+      return nodes;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Nodes",
+        context: "getting all nodes",
+      });
+    }
   }
 
-  /**
-   * Get a node by ID
-   *
-   * @param id Node ID
-   * @param include Optional relationships to include
-   * @returns Promise resolving to a Node instance
-   *
-   * @example
-   * // Get node with ID 1
-   * const node = await client.nodes.get(1);
-   */
-  async get(id: number | string, include: string[] = []) {
-    const response = await new NodeDetails(this.#client, id, include).execute();
-    const node = new Node(this.#client);
-    node.attributes = response.attributes;
-    return node;
+  async paginate(
+    options: NodeFilterOptions = {}
+  ): Promise<PaginatedResult<Node>> {
+    try {
+      const { limit, ...params } = options;
+      const page = params.page || 1;
+      const perPage = params.per_page || 50;
+
+      const response = await this.#client.axios.get("/nodes", {
+        params: { ...params, page, per_page: perPage },
+      });
+
+      let nodes = response.data.data.map(
+        (nodeData: NodeListResponse) =>
+          new Node(this.#client, nodeData.attributes)
+      );
+
+      const pagination = {
+        total: response.data.meta.pagination.total,
+        count: response.data.meta.pagination.count,
+        perPage: response.data.meta.pagination.per_page,
+        currentPage: response.data.meta.pagination.current_page,
+        totalPages: response.data.meta.pagination.total_pages,
+        links: {
+          next: response.data.meta.pagination.links.next || null,
+          previous: response.data.meta.pagination.links.prev || null,
+        },
+      };
+
+      const hasNextPage = pagination.currentPage < pagination.totalPages;
+      const hasPreviousPage = pagination.currentPage > 1;
+
+      const result: PaginatedResult<Node> = {
+        data: nodes,
+        pagination,
+        hasNextPage,
+        hasPreviousPage,
+      };
+
+      if (hasNextPage) {
+        result.fetchNextPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage + 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      if (hasPreviousPage) {
+        result.fetchPreviousPage = () =>
+          this.paginate({
+            ...options,
+            page: pagination.currentPage - 1,
+            per_page: pagination.perPage,
+          });
+      }
+
+      return result;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Nodes",
+        context: "paginating nodes",
+      });
+    }
   }
 
-  /**
-   * Create a new node
-   *
-   * @param data Node creation data
-   * @returns Promise resolving to the created Node instance
-   *
-   * @example
-   * // Create a new node
-   * const newNode = await client.nodes.create({
-   *   name: "New Node",
-   *   location_id: 1,
-   *   fqdn: "node.example.com",
-   *   scheme: "https",
-   *   memory: 4096,
-   *   disk: 50000,
-   *   // ... other required fields
-   * });
-   */
-  async create(data: CreateNodeData) {
-    const response = await new CreateNode(this.#client, data).execute();
-    const node = new Node(this.#client);
-    node.attributes = response.attributes;
-    return node;
+  async get(id: number | string): Promise<Node> {
+    try {
+      const response = await this.#client.axios.get(`/nodes/${id}`);
+      return new Node(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: id,
+        context: "getting node",
+      });
+    }
+  }
+
+  async create(data: CreateNodeData): Promise<Node> {
+    try {
+      const response = await this.#client.axios.post("/nodes", data);
+      return new Node(this.#client, response.data.attributes);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: data.name,
+        context: "creating node",
+      });
+    }
+  }
+
+  async delete(id: number | string): Promise<void> {
+    try {
+      await this.#client.axios.delete(`/nodes/${id}`);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: id,
+        context: "deleting node",
+      });
+    }
+  }
+
+  async bulkCreate(nodes: CreateNodeData[]): Promise<Node[]> {
+    return Promise.all(nodes.map((nodeData) => this.create(nodeData)));
+  }
+
+  async bulkDelete(ids: (number | string)[]): Promise<void> {
+    await Promise.all(ids.map((id) => this.delete(id)));
   }
 }
 
-/**
- * Represents a single node in the Pterodactyl panel
- */
-class Node {
+export class Node {
   #client: PteroClient;
-  attributes?: NodeAttributes;
+  attributes: NodeAttributes;
 
-  /**
-   * Create a new Node instance
-   *
-   * @param client PteroClient instance
-   */
-  constructor(client: PteroClient) {
+  constructor(client: PteroClient, attributes: NodeAttributes) {
     this.#client = client;
+    this.attributes = attributes;
   }
 
-  /**
-   * Get node ID
-   *
-   * @returns Node ID
-   */
-  public getId(): number {
-    return this.attributes?.id || 0;
+  get getAttributes(): NodeAttributes {
+    return this.attributes;
   }
 
-  /**
-   * Get node UUID
-   *
-   * @returns Node UUID
-   */
-  public getUuid(): string {
-    return this.attributes?.uuid || "";
+  get id(): number {
+    return this.attributes.id;
   }
 
-  /**
-   * Get node name
-   *
-   * @returns Node name
-   */
-  public getName(): string {
-    return this.attributes?.name || "";
+  get uuid(): string {
+    return this.attributes.uuid;
   }
 
-  /**
-   * Get node description
-   *
-   * @returns Node description
-   */
-  public getDescription(): string | null {
-    return this.attributes?.description || null;
+  get public(): boolean {
+    return this.attributes.public;
   }
 
-  /**
-   * Get node location ID
-   *
-   * @returns Location ID
-   */
-  public getLocationId(): number {
-    return this.attributes?.location_id || 0;
+  get name(): string {
+    return this.attributes.name;
   }
 
-  /**
-   * Get node FQDN (Fully Qualified Domain Name)
-   *
-   * @returns Node FQDN
-   */
-  public getFqdn(): string {
-    return this.attributes?.fqdn || "";
+  get description(): string | null {
+    return this.attributes.description;
   }
 
-  /**
-   * Get node scheme (http/https)
-   *
-   * @returns Node scheme
-   */
-  public getScheme(): string {
-    return this.attributes?.scheme || "https";
+  get locationId(): number {
+    return this.attributes.location_id;
   }
 
-  /**
-   * Get node behind proxy status
-   *
-   * @returns True if node is behind proxy
-   */
-  public isBehindProxy(): boolean {
-    return this.attributes?.behind_proxy || false;
+  get fqdn(): string {
+    return this.attributes.fqdn;
   }
 
-  /**
-   * Get node maintenance mode status
-   *
-   * @returns True if node is in maintenance mode
-   */
-  public isInMaintenance(): boolean {
-    return this.attributes?.maintenance_mode || false;
+  get scheme(): string {
+    return this.attributes.scheme;
   }
 
-  /**
-   * Get node memory allocation
-   *
-   * @returns Memory in MB
-   */
-  public getMemory(): number {
-    return this.attributes?.memory || 0;
+  get behindProxy(): boolean {
+    return this.attributes.behind_proxy;
   }
 
-  /**
-   * Get node memory overallocation
-   *
-   * @returns Memory overallocation percentage
-   */
-  public getMemoryOverallocation(): number {
-    return this.attributes?.memory_overallocate || 0;
+  get maintenanceMode(): boolean {
+    return this.attributes.maintenance_mode;
   }
 
-  /**
-   * Get node disk space
-   *
-   * @returns Disk space in MB
-   */
-  public getDisk(): number {
-    return this.attributes?.disk || 0;
+  get memory(): number {
+    return this.attributes.memory;
   }
 
-  /**
-   * Get node disk overallocation
-   *
-   * @returns Disk overallocation percentage
-   */
-  public getDiskOverallocation(): number {
-    return this.attributes?.disk_overallocate || 0;
+  get memoryOverallocate(): number {
+    return this.attributes.memory_overallocate;
   }
 
-  /**
-   * Get node daemon port
-   *
-   * @returns Daemon port
-   */
-  public getDaemonPort(): number {
-    return this.attributes?.daemon_listen || 8080;
+  get disk(): number {
+    return this.attributes.disk;
   }
 
-  /**
-   * Get node daemon SFTP port
-   *
-   * @returns SFTP port
-   */
-  public getDaemonSftpPort(): number {
-    return this.attributes?.daemon_sftp || 2022;
+  get diskOverallocate(): number {
+    return this.attributes.disk_overallocate;
   }
 
-  /**
-   * Get node creation date
-   *
-   * @returns Creation date string
-   */
-  public getCreatedAt(): string {
-    return this.attributes?.created_at || "";
+  get uploadSize(): number {
+    return this.attributes.upload_size;
   }
 
-  /**
-   * Get node last update date
-   *
-   * @returns Last update date string
-   */
-  public getUpdatedAt(): string {
-    return this.attributes?.updated_at || "";
+  get daemonListen(): number {
+    return this.attributes.daemon_listen;
   }
 
-  /**
-   * Update node details
-   *
-   * @param data Node update data
-   * @returns Promise resolving to the updated Node instance
-   *
-   * @example
-   * // Update node name
-   * await node.update({ name: "Updated Node Name" });
-   */
-  public async update(data: UpdateNodeData) {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Node", "unknown");
+  get daemonSftp(): number {
+    return this.attributes.daemon_sftp;
+  }
+
+  get daemonBase(): string {
+    return this.attributes.daemon_base;
+  }
+
+  get createdAt(): Date {
+    return new Date(this.attributes.created_at);
+  }
+
+  get updatedAt(): Date {
+    return new Date(this.attributes.updated_at);
+  }
+
+  get allocatedResources() {
+    return (
+      this.attributes.allocated_resources || {
+        memory: 0,
+        disk: 0,
+      }
+    );
+  }
+
+  get relationships(): NodeRelationships | null {
+    return this.attributes.relationships || null;
+  }
+
+  get allocations() {
+    return this.attributes.relationships?.allocations?.data || [];
+  }
+
+  get location() {
+    return this.attributes.relationships?.location?.attributes || null;
+  }
+
+  get servers() {
+    return this.attributes.relationships?.servers?.data || [];
+  }
+
+  async getDetails(include: string[] = []): Promise<Node> {
+    try {
+      const params = include.length ? { include: include.join(",") } : {};
+      const response = await this.#client.axios.get(`/nodes/${this.id}`, {
+        params,
+      });
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: this.id,
+        context: "getting node details",
+      });
     }
+  }
 
+  async update(data: UpdateNodeData): Promise<Node> {
     if (!Object.keys(data).length) {
       throw new ValidationError("No update fields provided");
     }
 
-    const response = await new UpdateNode(
-      this.#client,
-      this.attributes.id,
-      data
-    ).execute();
-
-    this.attributes = response.attributes;
-    return this;
-  }
-
-  /**
-   * Delete the node
-   *
-   * @returns Promise resolving when the node is deleted
-   *
-   * @example
-   * // Delete the node
-   * await node.delete();
-   */
-  public async delete() {
-    if (!this.attributes?.id) {
-      throw new NotFoundError("Node", "unknown");
+    try {
+      const response = await this.#client.axios.patch(
+        `/nodes/${this.id}`,
+        data
+      );
+      this.attributes = response.data.attributes;
+      return this;
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: this.id,
+        context: "updating node",
+      });
     }
-    await new DeleteNode(this.#client, this.attributes.id).execute();
   }
 
-  /**
-   * Convert node to a simple object representation
-   *
-   * @returns Simple object with key node properties
-   */
+  async delete(): Promise<void> {
+    try {
+      await this.#client.axios.delete(`/nodes/${this.id}`);
+    } catch (error) {
+      throw handleApiError(error, {
+        resource: "Node",
+        identifier: this.id,
+        context: "deleting node",
+      });
+    }
+  }
+
   public toJSON() {
     return {
-      id: this.getId(),
-      uuid: this.getUuid(),
-      name: this.getName(),
-      description: this.getDescription(),
-      locationId: this.getLocationId(),
-      fqdn: this.getFqdn(),
-      scheme: this.getScheme(),
-      memory: this.getMemory(),
-      disk: this.getDisk(),
-      isInMaintenance: this.isInMaintenance(),
-      createdAt: this.getCreatedAt(),
-      updatedAt: this.getUpdatedAt(),
+      id: this.id,
+      uuid: this.uuid,
+      public: this.public,
+      name: this.name,
+      description: this.description,
+      locationId: this.locationId,
+      fqdn: this.fqdn,
+      scheme: this.scheme,
+      behindProxy: this.behindProxy,
+      maintenanceMode: this.maintenanceMode,
+      memory: this.memory,
+      memoryOverallocate: this.memoryOverallocate,
+      disk: this.disk,
+      diskOverallocate: this.diskOverallocate,
+      uploadSize: this.uploadSize,
+      daemonListen: this.daemonListen,
+      daemonSftp: this.daemonSftp,
+      daemonBase: this.daemonBase,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+      allocatedResources: this.allocatedResources,
+      relationships: this.relationships,
     };
   }
 
-  /**
-   * String representation of the node
-   *
-   * @returns String representation
-   */
   public toString(): string {
-    return `Node(${this.getId()}: ${this.getName()})`;
+    return `Node(${this.id}: ${this.name})`;
   }
 }
-
-export { Nodes, Node };
