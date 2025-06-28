@@ -1,0 +1,41 @@
+# Source
+src/
+tests/
+examples/
+
+# Testing Files
+dist/test/
+
+# Config files
+.eslintrc.json
+.prettierrc
+.editorconfig
+tsconfig.json
+tsup.config.ts
+jest.config.js
+
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Development
+.github/
+.vscode/
+.idea/
+coverage/
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

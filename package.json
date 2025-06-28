@@ -1,0 +1,60 @@
+{
+  "name": "pterolink",
+  "version": "0.1.0-alpha.1",
+  "description": "A Node.js library for interacting with the Pterodactyl Panel API",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "build:dev": "cross-env BUILD_TYPE=dev tsup",
+    "dev": "cross-env BUILD_TYPE=dev tsup --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "type-check": "tsc --noEmit",
+    "test": "node dist/test/test.js"
+  },
+  "keywords": [
+    "pterodactyl",
+    "api",
+    "nodejs",
+    "typescript",
+    "pterodactyl-panel",
+    "pterodactyl-api",
+    "pterolink"
+  ],
+  "author": "maybeizen",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "eslint": "^8.57.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "chalk": "^5.4.1",
+    "pterolink": "link:C:/Users/briar/AppData/Local/pnpm/global/5/node_modules/pterolink"
+  },
+  "pnpm": {
+    "overrides": {
+      "pterolink": "link:C:/Users/briar/AppData/Local/pnpm/global/5/node_modules/pterolink"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
